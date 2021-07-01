@@ -30,7 +30,8 @@
     library(here)
     library(gt)
     
-    
+    up_arrow <- "<span style=\"color:green\">&#9650;</span>"
+    down_arrow <- "<span style=\"color:red\">&#9660;</span>"
     
   
 
@@ -110,7 +111,7 @@ library(gt)
  
  gtsave(tbl1, "vax_table.png")
  
- #This one is to focus on one region
+ #This one is to focus on one region (old)
  df1<-df%>%
    select(state_region, population_total,value, date)%>%
    group_by(state_region,date)%>%
@@ -145,18 +146,37 @@ library(gt)
 
  df3<-left_join(df_vaxr,df2, by="state_region")%>%
    dplyr::mutate("Vaccine Percentage"=value /population)
+ df3<-df3%>%
+   dplyr::filter(state_region!="NA")
+ df5<-df3%>%
+   dplyr::select(-c("value", "population"))%>%
+   pivot_wider(names_from = date, values_from="Vaccine Percentage")
  
-tbl3<-df3%>%
-  dplyr::select(-c("value", "population"))%>%
-   gt(groupname_col = "state_region")%>%
+ 
+tbl4<-df5%>%
+   gt(groupname_col = "state_region",
+      rowname_col="date")%>%
+  
    tab_spanner(
      label = "Total Population Vaccinated",
-     columns = c("Vaccine Percentage"))%>%
+     columns = c("2021-05-31","2021-06-18"))%>%
    fmt_percent(
-     columns = vars("Vaccine Percentage"),
-     decimals = 2
-   )
- gtsave(tbl3, "vax_table_region_new.png")
+     columns = vars("2021-05-31","2021-06-18"),
+     decimals = 2)
+%>%
+#  text_transform(
+ #   locations = cells_body(
+  #    columns = vars("2021-05-31","2021-06-18"),
+   #   rows = "2021-05-31" > "2021-06-18"),
+#    fn = function(x) paste(x, up_arrow)
+ # ) %>%
+  #text_transform(
+   # locations = cells_body(
+    #  columns = close,
+     # rows = "2021-06-18" < "2021-05-31"),
+  #  fn = function(x) paste(x, down_arrow)
+#  )
+ gtsave(tbl4, "vax_table_region_new.png")
 
     
 # SPINDOWN ============================================================================
