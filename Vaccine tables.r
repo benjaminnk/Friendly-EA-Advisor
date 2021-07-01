@@ -128,10 +128,35 @@ library(gt)
            decimals = 2
          )
  gtsave(tbl2, "vax_table_region.png")
-  
-   
+
  
-  
+ #NEw way to focus on regional data
+#grab population data   
+ df2<-df%>%
+   group_by(state_region) %>%                         # Specify group indicator
+   summarise_at(vars(population_total),              # Specify column
+                list(population = sum))
+ #grab vax data
+ df_vaxr<-df%>%group_by(state_region, date)%>%
+   summarise_at(vars(value),              # Specify column
+                list(value= sum))
+ 
+   
+
+ df3<-left_join(df_vaxr,df2, by="state_region")%>%
+   dplyr::mutate("Vaccine Percentage"=value /population)
+ 
+tbl3<-df3%>%
+  dplyr::select(-c("value", "population"))%>%
+   gt(groupname_col = "state_region")%>%
+   tab_spanner(
+     label = "Total Population Vaccinated",
+     columns = c("Vaccine Percentage"))%>%
+   fmt_percent(
+     columns = vars("Vaccine Percentage"),
+     decimals = 2
+   )
+ gtsave(tbl3, "vax_table_region_new.png")
 
     
 # SPINDOWN ============================================================================
