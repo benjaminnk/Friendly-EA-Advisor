@@ -81,17 +81,44 @@ library(gt)
     dplyr::filter(state_region=="Europe and Eurasia")%>%
     dplyr::select(-c(country_id, iso_alpha3,usaid_region,data_services_region,classification_value_name
                           ,population_total,pop_2020_thousands,series_id,state_region,value  ))%>%
-    #pivot_wider(names_from = date, values_from=`Vaccine Percentage`)%>%
-    gt(
+    pivot_wider(names_from = date, values_from=`Vaccine Percentage`)%>%
+    gt()%>%
       #rowname_col = "Date",
-      groupname_col = "country_name") %>%
-    tab_spanner(
-      label = "Total Population Vaccinated",
-      columns = c("Vaccine Percentage"))%>%
-    fmt_percent(
-      columns = vars("Vaccine Percentage"),
-      decimals = 2
-    )%>%
+  tab_spanner(
+    label = "Total Population Vaccinated",
+    columns = c("2021-05-31","2021-06-18"))%>%
+  fmt_percent(
+    columns = vars("2021-05-31","2021-06-18"),
+    decimals = 2)%>%
+   fmt_missing(columns = everything(),
+               missing_text = "-") %>% 
+   tab_options(
+     table.font.names = "Source Sans Pro") %>%
+   cols_width(
+     
+     everything() ~ px(140)
+   ) %>% 
+   tab_style(
+     style = cell_borders(
+       sides = "right",
+       weight = px(1.5),
+     ),
+     locations = cells_body(
+       columns = everything(),
+       rows = everything()
+     ))%>%
+  cols_label(country_name="Name")%>%
+  tab_header(title = "Status of Global Vaccination Campaign in Europe and Eurasia as of June 18, 2021",
+             ) %>% 
+  tab_source_note("Source: CJ's Dataset 2020-06-18")%>%
+   tab_footnote(
+     footnote = "Percentage is based off of total population, not the population 18+",
+     locations = cells_column_labels(
+       columns = "2021-06-18"))
+  
+  
+  #ignore the below
+  
     tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
               locations = cells_body(                 ## telling it where (ie, the body of a cell)
                 columns = vars("Vaccine Percentage"),      ## which col this refers to (note `vars()`)
@@ -153,17 +180,42 @@ library(gt)
    pivot_wider(names_from = date, values_from="Vaccine Percentage")
  
  
-tbl4<-df5%>%
-   gt(groupname_col = "state_region",
-      rowname_col="date")%>%
-  
-   tab_spanner(
-     label = "Total Population Vaccinated",
-     columns = c("2021-05-31","2021-06-18"))%>%
-   fmt_percent(
-     columns = vars("2021-05-31","2021-06-18"),
-     decimals = 2)
-%>%
+tbl4<-df3%>%
+  dplyr::select(-c("value", "population"))%>%
+  pivot_wider(names_from = date, values_from="Vaccine Percentage")%>%
+  gt()%>%
+ 
+  tab_spanner(
+    label = "Total Population Vaccinated",
+    columns = c("2021-05-31","2021-06-18"))%>%
+  fmt_percent(
+    columns = vars("2021-05-31","2021-06-18"),
+    decimals = 2)%>%
+  fmt_missing(columns = everything(),
+              missing_text = "-") %>% 
+  tab_options(
+    table.font.names = "Source Sans Pro") %>%
+  cols_width(
+    
+    everything() ~ px(140)
+  ) %>% 
+  tab_style(
+    style = cell_borders(
+      sides = "all",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+  #cols_label(country_name="state_region")%>%
+  tab_header(title = "Status of Global Vaccination Campaign  as of June 18, 2021",
+  ) %>% 
+  tab_source_note("Source: CJ's Dataset 2020-06-18")%>%
+  tab_footnote(
+    footnote = "Percentage is based off of total population, not the population 18+",
+    locations = cells_column_labels(
+      columns = "2021-06-18"))
 #  text_transform(
  #   locations = cells_body(
   #    columns = vars("2021-05-31","2021-06-18"),
