@@ -42,6 +42,12 @@
   #country
     df_country<-read.csv("Data/Potential COVID Mock up.xlsx - country_metadata.csv")
     
+    LMICS<-c("Afghanistan","Benin","Burkina Faso","Burundi","Central African Republic","Chad","Congo,Dem. Rep.",
+    "Eritrea","Ethiopia","Gambia","The Guinea","Guinea-Bissau","Haiti",
+    "Liberia","Madagascar","Malawi","Mali","Mozambique","Nepal","Niger","Rwanda",
+    "Sierra Leone","Somalia","South Sudan","Syrian Arab Republic",
+    "Tajikistan","Tanzania","Togo","Uganda","Yemen,Rep.")
+    
   
 
 # MUNGE ============================================================================
@@ -51,12 +57,27 @@
     
     #get just vaccine data 77573
     df<-df%>%
-      dplyr::filter(series_id=="77573")
+      dplyr::filter(series_id=="79713")
+    #interpolating
+    library(zoo)
+    df  %>% mutate(interpolated_indicator = na.approx(value, na.rm = FALSE))
+    
+    df<-df%>%
+            dplyr::filter(country_name %in% LMICS)
+    
+    #filter by max date
+    df5<-df %>% 
+     # group_by(country_name) %>%
+      slice(which.max(as.Date(date, '%Y/%M/%D')))
     
     #loop over some dates I chose two
     library(lubridate)
     df<-df%>%
-      dplyr::filter(date == "2021-05-31" | date =="2021-06-18")
+      dplyr::filter(date == "2021-06-01" | date =="2021-07-01" | date =="2021-06-24")
+    
+    df<-df%>%
+      filter(!is.na(state_region))
+      
     
     #mutate find vax per total pop
     df<-df%>%
@@ -67,7 +88,47 @@
       #pivot_wider(names_from = date,
        #                  values_from = `Vaccine Percentage`)
    
+    df<- df%>%
+      dplyr::mutate(`metric` = `series_id`)%>%
+      mutate(`metric` = ifelse(`metric` == "79713", "Percentage of Population Fully Vaccinated",
+                               "Other"))
+#messing around with count tables    
+    df<- df%>%
+      dplyr::mutate(`Goal` = `Vaccine Percentage`)%>%
+      mutate(`Goal` = ifelse(`Vaccine Percentage` >=.2, "Above 20%",
+                               ifelse(`Vaccine Percentage`<.05, "Below 5%",
+                               "5-19%")))
+   #regional counts and income counts for percentage and total vaxed
+    df1<-df%>%
+      dplyr::filter(date =="2021-07-01")%>%
+      count(state_region,`Goal`)%>%
+      group_by(state_region) %>% 
+      mutate(total_n = sum(n)) %>%
+      dplyr::mutate("Percentage"=n /total_n)
+    write.csv(df1,"Vaccine chart.csv")
       
+
+    dfIC<-df%>%
+      dplyr::filter(date =="2021-07-01")%>%
+      count(income_group,`Goal`)%>%
+      group_by(income_group) %>% 
+      mutate(total_n = sum(n)) %>%
+      dplyr::mutate("Percentage"=n /total_n)
+    write.csv(dfIC,"IC total vaxed 7.1.21.csv")
+    
+    df_vaxr<-df%>%group_by(state_region, date)%>%
+      summarise_at(vars(value),              # Specify column
+                   list(value= sum))
+    write.csv(df_vaxr, "Population vaxed by region.csv")
+    df_vaxrIC<-df%>%group_by(income_group, date)%>%
+      summarise_at(vars(value),              # Specify column
+                   list(value= sum))
+    write.csv(df_vaxrIC, "Population vaxed by ic.csv")
+    df_global<-df%>%
+      group_by(date)%>%
+      summarise_at(vars(value),              # Specify column
+                   list(value= sum))
+    #the above is different than what is in the chart since I dropped non state_regions
   
 # VIZ ============================================================================
 
@@ -168,7 +229,9 @@ library(gt)
  df_vaxr<-df%>%group_by(state_region, date)%>%
    summarise_at(vars(value),              # Specify column
                 list(value= sum))
- 
+ df_vaxrIC<-df%>%group_by(income_group, date)%>%
+   summarise_at(vars(value),              # Specify column
+                list(value= sum))
    
 
  df3<-left_join(df_vaxr,df2, by="state_region")%>%
@@ -232,4 +295,12 @@ tbl4<-df3%>%
 
     
 # SPINDOWN ============================================================================
-
+df2<-df1%>%
+   dplyr::select("Goal","state_region","Percentage")%>%
+   dplyr::filter(!is.na("state_region"))
+ df2%>%  gt(
+     groupname_col = "state_region"
+   )%>%
+   fmt_percent(
+     columns = "Percentage",
+     decimals = 0)
