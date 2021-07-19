@@ -37,10 +37,11 @@ library(ggtext)
 library(glue)
 library(janitor)
 library(lubridate)
+library(readxl)
+library(readexcel)
 
 
 pal <- RColorBrewer::brewer.pal(5, "Spectral")[2:5] ## we'll come back to this
-save_path <- "2021-01-18"
 
 ```
   
@@ -55,7 +56,7 @@ df<-as.data.frame(raw)
   df<-df%>% dplyr::filter(operatingunit == "Democratic Republic of the Congo",
           standardizeddisaggregate == "Total Numerator",
   
-                    indicator %in% c("HTS_TST", "HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_NET_NEW", "VMMC_CIRC", "PrEP_NEW"),
+                    indicator %in% c("HTS_TST", "HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_NET_NEW", "VMMC_CIRC", "PrEP_NEW","SC_CURR", "PMTCT_EID"),
           fiscal_year %in% c(2021))%>% 
    reshape_msd("long") 
    
@@ -72,6 +73,38 @@ df<-as.data.frame(raw)
 #filter to usaid and pivot longer
   df <- df %>%
   #filter(fundingagency == "USAID") %>% 
+  tidyr::pivot_wider(names_from = period_types,
+              values_from = value)
+ df<-df%>%
+   mutate(`FY21 Achieved` =  `FY21 cumulative`/`FY21 targets`)%>%
+   rename(`FY21 Q1`=`FY21Q1 results`,
+          `FY21 Q2`=`FY21Q2 results`)
+ 
+  raw <- read_msd("Data/MER_Structured_Datasets_PSNU_IM_FY19-21_20210514_v1_1_Democratic Republic of the Congo.txt")
+df<-as.data.frame(raw)
+# # 
+  df<-df%>% dplyr::filter(operatingunit == "Democratic Republic of the Congo",
+          standardizeddisaggregate == "Total Numerator",
+  
+                    indicator %in% c("HTS_TST", "HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_NET_NEW", "VMMC_CIRC", "PrEP_NEW","SC_CURR", "PMTCT_EID","TX_PVLS"),
+          fiscal_year %in% c(2021))%>% 
+   reshape_msd("long") 
+   
+# # group by period types and quarters
+ df<-df%>%
+   mutate(period_types = glue("{`period`} {`period_type`}"))
+   
+  df <- df %>% 
+   dplyr::group_by(snu1,indicator, period_types) %>% 
+   dplyr::summarise(value = sum(value))
+  df<-df%>%
+    dplyr::filter(snu1 != "_Military Democratic Republic of the Congo")
+ 
+ 
+
+#filter to usaid and pivot longer
+  df <- df %>%
+  filter(fundingagency == "USAID") %>% 
   tidyr::pivot_wider(names_from = period_types,
               values_from = value)
  df<-df%>%
@@ -105,7 +138,7 @@ df <- df %>%
                                    "TX_CURR",
                                    "TX_NET_NEW",
                                    "VMMC_CIRC",
-                                   "PrEP_NEW")) %>% 
+                                   "PrEP_NEW","SC_CURR", "PMTCT_EID","TX_PVLS")) %>% 
     arrange(indicator)
 ```
 
@@ -114,7 +147,7 @@ df <- df %>%
 
 ```{r}
 #add in decimals, and commas, and get rid of NAs
-df %>% 
+tbl1<-df %>% 
   gt(groupname_col = "fundingagency",
     rowname_col = "indicator") %>% 
   fmt_number(
@@ -148,6 +181,11 @@ df %>%
       columns = everything(),
       rows = everything()
     ))%>%
+   tab_spanner(
+    label = "FY21 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%
 
 
   tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
@@ -168,6 +206,8 @@ df %>%
                 rows = `FY21 Achieved` < .75))%>%
  tab_header(title = "PEPFAR/DRC results, performance, and targets FY21 Q1-Q2") %>% 
   tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+
+tbl1%>%gtsave("partner performance.png")
   
 
 
@@ -177,36 +217,38 @@ df %>%
 ```
 Do the same as above but for just USAID partners
 ```{R}
-df<-as.data.frame(raw)
+df4<-as.data.frame(raw)
 # # 
-  df<-df%>% dplyr::filter(operatingunit == "Democratic Republic of the Congo",
+  df4<-df4%>% dplyr::filter(operatingunit == "Democratic Republic of the Congo",
           standardizeddisaggregate == "Total Numerator",
   
-                    indicator %in% c("HTS_TST", "HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_NET_NEW", "VMMC_CIRC", "PrEP_NEW"),
+                    indicator %in% c("HTS_TST", "HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_NET_NEW", "VMMC_CIRC", "PrEP_NEW","SC_CURR", "PMTCT_EID","TX_PVLS","HTS_INDEX"),
           fiscal_year %in% c(2021))%>% 
    reshape_msd("long") 
    
 # # group by period types and quarters
- df<-df%>%
+ df4<-df4%>%
    mutate(period_types = glue("{`period`} {`period_type`}"))
    
-  df <- df %>% 
+  df4<- df4 %>% 
    dplyr::group_by(fundingagency,primepartner,indicator, period_types) %>% 
    dplyr::summarise(value = sum(value))
  
  
+ 
 
 #filter to usaid and pivot longer
-  df <- df %>%
+  df4 <- df4 %>%
   filter(fundingagency == "USAID") %>% 
+   #filter(indicator %in% c("HTS_TST","HTS_TST_POS", "PMTCT_EID"))%>%
   tidyr::pivot_wider(names_from = period_types,
               values_from = value)
- df<-df%>%
+ df4<-df4%>%
    mutate(`FY21 Achieved` =  `FY21 cumulative`/`FY21 targets`)%>%
    rename(`FY21 Q1`=`FY21Q1 results`,
           `FY21 Q2`=`FY21Q2 results`,
           `Prime Partner`=`primepartner`)
-df <- df %>%
+df4 <- df4 %>%
     dplyr::relocate(`FY21 cumulative`, .before = `FY21 targets`) %>% 
     dplyr::relocate(`FY21 targets`, .before = `FY21 Achieved`) %>%
     dplyr::relocate(`FY21 Q2`, .before=`FY21 cumulative`)%>%
@@ -217,14 +259,134 @@ df <- df %>%
                                    "TX_CURR",
                                    "TX_NET_NEW",
                                    "VMMC_CIRC",
-                                   "PrEP_NEW")) %>% 
+                                   "PrEP_NEW","SC_CURR", "PMTCT_EID","TX_PVLS","HTS_INDEX")) %>% 
     arrange(indicator)
 
-df %>% 
-  gt(groupname_col = "Prime Partner",
-    rowname_col = "indicator") %>% 
+df_tst<-df4%>%
+   filter(`indicator` %in% c("HTS_INDEX","HTS_TST","HTS_TST_POS", "PMTCT_EID"))
+df_tx<-df4%>%
+  filter(`indicator` %in% c("TX_CURR","TX_NEW"))
+
+
+tbl5<-df_tst %>% 
+  #group_by(`indicator`, `Prime Partner`)%>%
+  #filter(`indicator` == "HTS_TST","HTS_TST_POS", "PMTCT_EID")%>%
+  gt(groupname_col = "indicator",
+    rowname_col = "Prime Partner")%>% 
    cols_hide(
-    columns = c("fundingagency"))%>% #hide agency
+    columns = c("fundingagency","indicator","Prime Partner"))%>% #hide agency
+  fmt_number(
+    columns = vars(
+      `FY21 Q1`,
+      `FY21 Q2`,
+      `FY21 cumulative`,
+      `FY21 targets`),
+    decimals = 0
+  ) %>% 
+  fmt_percent(
+    columns = vars(`FY21 Achieved`),
+    decimals = 0
+  )%>%
+  fmt_missing(columns = everything(),
+            missing_text = "-")%>%
+   tab_options(
+    table.font.names = "Source Sans Pro"
+    ) %>% 
+   cols_width(
+    vars("Prime Partner") ~ px(140),
+    everything() ~ px(80)
+  )%>%
+  tab_style(
+    style = cell_borders(
+      sides = "right",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+  
+   tab_spanner(
+    label = "COP20 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
+              locations = cells_body(                 ## telling it where (ie, the body of a cell)
+                columns = vars(`FY21 Achieved`),      ## which col this refers to (note `vars()`)
+                rows = `FY21 Achieved` >= 1.1)) %>%   ## the argument
+    tab_style(style = cell_fill(color = pal[3]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < 1.1)) %>% 
+    tab_style(style = cell_fill(color = pal[2]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .9)) %>% 
+    tab_style(style = cell_fill(color = pal[1]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .75))%>%
+ tab_header(title = "USAID Testing Results, Performance, and Targets FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+tbl5%>%gtsave("tst usaid performance.png")
+
+      tab_style(style = list(cell_fill(color = old_rose_light, alpha = 0.75)),
+            locations = cells_body(
+              columns = c("FY21 Achieved"),
+              rows = "FY21 Achieved" < 0.25 & "indicator" != "TX_CURR")
+  ) %>% 
+    tab_style(style = list(cell_fill(color = burnt_sienna_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 0.25 & "FY21 Achieved" < 0.4 & "indicator" != "TX_CURR")
+    ) %>% 
+    tab_style(style = list(cell_fill(color = scooter_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 0.4 & "FY21 Achieved" < 0.6 & "indicator" != "TX_CURR")
+    ) %>% 
+    tab_style(style = list(cell_fill(color = trolley_grey_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 0.6 & "indicator" != "TX_CURR")
+              ) %>% 
+    
+  # NOW TX_CURR
+  tab_style(style = list(cell_fill(color = old_rose_light, alpha = 0.75)),
+            locations = cells_body(
+              columns = c("FY21 Achieved"),
+              rows = "FY21 Achieved" < 0.75 & "indicator" == "TX_CURR")
+  ) %>% 
+    tab_style(style = list(cell_fill(color = burnt_sienna_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 0.75 & "FY21 Achieved" < 0.9 & "indicator" == "TX_CURR")
+    ) %>% 
+    tab_style(style = list(cell_fill(color = scooter_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 0.9 & "FY21 Achieved" < 1.1 & "indicator" == "TX_CURR")
+    ) %>% 
+    tab_style(style = list(cell_fill(color = trolley_grey_light, alpha = 0.75)),
+              locations = cells_body(
+                columns = c("FY21 Achieved"),
+                rows = "FY21 Achieved" >= 1.1 & "indicator" == "TX_CURR")
+    )%>%
+ tab_header(title = "USAID Partners results, performance, and targets FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+```
+
+#SNU
+```{r}
+   dfhk<-df%>%
+    dplyr::filter(snu1 == "Haut Katanga")
+    dfk<-df%>%
+    dplyr::filter(snu1 == "Kinshasa")
+     dfl<-df%>%
+    dplyr::filter(snu1 == "Lualaba")
+tblhk<-dfhk %>% 
+  gt(groupname_col = "snu1",
+    rowname_col = "indicator") %>% 
   fmt_number(
     columns = vars(
       `FY21 Q1`,
@@ -246,6 +408,7 @@ df %>%
     vars(indicator) ~ px(140),
     everything() ~ px(80)
   )%>%
+ 
   tab_style(
     style = cell_borders(
       sides = "right",
@@ -255,6 +418,11 @@ df %>%
       columns = everything(),
       rows = everything()
     ))%>%
+   tab_spanner(
+    label = "FY21 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%
 
 
   tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
@@ -273,6 +441,268 @@ df %>%
               locations = cells_body(
                 columns = vars(`FY21 Achieved`),
                 rows = `FY21 Achieved` < .75))%>%
- tab_header(title = "USAID Partners results, performance, and targets FY21 Q1-Q2") %>% 
+ tab_header(title = "PEPFAR/DRC results, performance, and targets FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+
+  
+  
+  tbll<-dfl %>% 
+  gt(groupname_col = "snu1",
+    rowname_col = "indicator") %>% 
+  fmt_number(
+    columns = vars(
+      `FY21 Q1`,
+      `FY21 Q2`,
+      `FY21 cumulative`,
+      `FY21 targets`),
+    decimals = 0
+  ) %>% 
+  fmt_percent(
+    columns = vars(`FY21 Achieved`),
+    decimals = 0
+  )%>%
+  fmt_missing(columns = everything(),
+            missing_text = "-")%>%
+   tab_options(
+    table.font.names = "Source Sans Pro"
+    ) %>% 
+   cols_width(
+    vars(indicator) ~ px(140),
+    everything() ~ px(80)
+  )%>%
+ 
+  tab_style(
+    style = cell_borders(
+      sides = "right",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+   tab_spanner(
+    label = "FY21 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%
+
+
+  tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
+              locations = cells_body(                 ## telling it where (ie, the body of a cell)
+                columns = vars(`FY21 Achieved`),      ## which col this refers to (note `vars()`)
+                rows = `FY21 Achieved` >= 1.1)) %>%   ## the argument
+    tab_style(style = cell_fill(color = pal[3]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < 1.1)) %>% 
+    tab_style(style = cell_fill(color = pal[2]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .9)) %>% 
+    tab_style(style = cell_fill(color = pal[1]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .75))%>%
+ tab_header(title = "PEPFAR/DRC results, performance, and targets FY21 Q1-Q2") %>% 
   tab_source_note("Source: MSD FY20Q2i 2021-05-20")
   
+  
+tblk<-  dfk %>% 
+  gt(groupname_col = "snu1",
+    rowname_col = "indicator") %>% 
+  fmt_number(
+    columns = vars(
+      `FY21 Q1`,
+      `FY21 Q2`,
+      `FY21 cumulative`,
+      `FY21 targets`),
+    decimals = 0
+  ) %>% 
+  fmt_percent(
+    columns = vars(`FY21 Achieved`),
+    decimals = 0
+  )%>%
+  fmt_missing(columns = everything(),
+            missing_text = "-")%>%
+   tab_options(
+    table.font.names = "Source Sans Pro"
+    ) %>% 
+   cols_width(
+    vars(indicator) ~ px(140),
+    everything() ~ px(80)
+  )%>%
+ 
+  tab_style(
+    style = cell_borders(
+      sides = "right",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+   tab_spanner(
+    label = "FY21 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%
+
+
+  tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
+              locations = cells_body(                 ## telling it where (ie, the body of a cell)
+                columns = vars(`FY21 Achieved`),      ## which col this refers to (note `vars()`)
+                rows = `FY21 Achieved` >= 1.1)) %>%   ## the argument
+    tab_style(style = cell_fill(color = pal[3]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < 1.1)) %>% 
+    tab_style(style = cell_fill(color = pal[2]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .9)) %>% 
+    tab_style(style = cell_fill(color = pal[1]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .75))%>%
+ tab_header(title = "PEPFAR/DRC results, performance, and targets FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+  
+  
+
+
+tblhk%>%gtsave("hk performance.png")
+tblk%>%gtsave("k performance.png")
+tbll%>%gtsave("l performance.png")
+
+```
+
+```{r}
+tbltx<-df_tx %>% 
+  #group_by(`indicator`, `Prime Partner`)%>%
+  #filter(`indicator` == "HTS_TST","HTS_TST_POS", "PMTCT_EID")%>%
+  gt(groupname_col = "indicator",
+    rowname_col = "Prime Partner")%>% 
+   cols_hide(
+    columns = c("fundingagency","indicator","Prime Partner"))%>% #hide agency
+  fmt_number(
+    columns = vars(
+      `FY21 Q1`,
+      `FY21 Q2`,
+      `FY21 cumulative`,
+      `FY21 targets`),
+    decimals = 0
+  ) %>% 
+  fmt_percent(
+    columns = vars(`FY21 Achieved`),
+    decimals = 0
+  )%>%
+  fmt_missing(columns = everything(),
+            missing_text = "-")%>%
+   tab_options(
+    table.font.names = "Source Sans Pro"
+    ) %>% 
+   cols_width(
+    vars("Prime Partner") ~ px(140),
+    everything() ~ px(80)
+  )%>%
+  tab_style(
+    style = cell_borders(
+      sides = "right",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+  
+   tab_spanner(
+    label = "COP20 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
+              locations = cells_body(                 ## telling it where (ie, the body of a cell)
+                columns = vars(`FY21 Achieved`),      ## which col this refers to (note `vars()`)
+                rows = `FY21 Achieved` >= 1.1)) %>%   ## the argument
+    tab_style(style = cell_fill(color = pal[3]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < 1.1)) %>% 
+    tab_style(style = cell_fill(color = pal[2]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .9)) %>% 
+    tab_style(style = cell_fill(color = pal[1]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .75))%>%
+ tab_header(title = "USAID Treatment Results, Performance, and Targets FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+tbltx%>%gtsave("tx usaid performance.png")
+
+
+
+DRC_VLC_VLS <- read_excel("Data/DRC VLC_VLS.xlsx")
+     
+df_VLC<-DRC_VLC_VLS
+tblvc<-df_VLC%>%
+
+  #group_by(`indicator`, `Prime Partner`)%>%
+  #filter(`indicator` == "HTS_TST","HTS_TST_POS", "PMTCT_EID")%>%
+  gt(groupname_col = "Indicator",
+    rowname_col = "Prime Partner")%>% 
+  # cols_hide(
+   # columns = c("fundingagency","indicator","Prime Partner"))%>% #hide agency
+  fmt_number(
+    columns = vars(
+      `FY21 Q1`,
+      `FY21 Q2`,
+      `FY21 cumulative`,
+      `FY21 targets`),
+    decimals = 0
+  ) %>% 
+  fmt_percent(
+    columns = vars(`FY21 Achieved`),
+    decimals = 0
+  )%>%
+  fmt_missing(columns = everything(),
+            missing_text = "-")%>%
+   tab_options(
+    table.font.names = "Source Sans Pro"
+    ) %>% 
+   cols_width(
+    vars("Prime Partner") ~ px(140),
+    everything() ~ px(80)
+  )%>%
+  tab_style(
+    style = cell_borders(
+      sides = "right",
+      weight = px(1.5),
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    ))%>%
+  
+   tab_spanner(
+    label = "COP20 Results",
+    columns = c( "FY21 Q1",
+      "FY21 Q2",
+      "FY21 cumulative"))%>%tab_style(style = cell_fill(color = pal[4]),      ## defining the what (the 4th value of the pal object)
+              locations = cells_body(                 ## telling it where (ie, the body of a cell)
+                columns = vars(`FY21 Achieved`),      ## which col this refers to (note `vars()`)
+                rows = `FY21 Achieved` >= 1.1)) %>%   ## the argument
+    tab_style(style = cell_fill(color = pal[3]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < 1.1)) %>% 
+    tab_style(style = cell_fill(color = pal[2]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .9)) %>% 
+    tab_style(style = cell_fill(color = pal[1]),
+              locations = cells_body(
+                columns = vars(`FY21 Achieved`),
+                rows = `FY21 Achieved` < .75))%>%
+ tab_header(title = "USAID Viral Suppression FY21 Q1-Q2") %>% 
+  tab_source_note("Source: MSD FY20Q2i 2021-05-20")
+tblvc%>%gtsave("vls usaid performance.png")

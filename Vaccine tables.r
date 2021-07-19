@@ -128,6 +128,10 @@
       group_by(date)%>%
       summarise_at(vars(value),              # Specify column
                    list(value= sum))
+      df_global%>%
+      group_by(date)
+      summarise_at(vars(population_total),
+                   list(population_total=sum))
     #the above is different than what is in the chart since I dropped non state_regions
   
 # VIZ ============================================================================

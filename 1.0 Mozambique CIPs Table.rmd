@@ -39,6 +39,7 @@ library(ggtext)
 library(glue)
 library(janitor)
 library(lubridate)
+library(patchwork)
 
 
 pal <- RColorBrewer::brewer.pal(5, "Spectral")[2:4] ## we'll come back to this
@@ -271,11 +272,11 @@ tbl3%>%gtsave("high outlay table.png")
 
 ```{r}
 #top 5 over outlay
-tbl4<-df %>%
+tbl4<-df_Over %>%
    dplyr::select(-`Prime Partner Name`,-Mechanism.ID, -`Undisbursed`)%>%
   dplyr::relocate(`COP 20 Budget`, .after = `Total Outlays`)%>%
   arrange(desc(`Outlay Perct.`))%>%
-  top_n(6)%>%# sort by outlay %
+ # top_n(6)%>%# sort by outlay %
   gt()%>%
   fmt_missing(columns = everything(),
             missing_text = "-")%>%
@@ -312,21 +313,23 @@ tbl4<-df %>%
    #           locations = cells_body(
     #            columns = everything(),
      #           rows = 1))%>%
- tab_header(title = "USAID's  Top 5 Over-Outlaying Mechanisms") %>% 
+ tab_header((title = "USAID's Over-Outlaying Mechanisms"),
+ subtitle = ("Mechanisms Outlaying More than 60% as of Q2")
+  )%>%
   tab_source_note("Source: USAID Phoenix Financial System May 2021")%>%
   tab_footnote(footnote = "Includes new funding and applied pipeline.",
     locations = cells_column_labels(columns = "COP 20 Budget"))%>%
   
-  tab_footnote(
-    footnote = "Over-outlay due to increase of activities and TEC increase action approved in Q3 FY21.",
-    locations = cells_body(columns = "Mechanism Name", rows = 2))%>%
+#  tab_footnote(
+ #   footnote = "Over-outlay due to increase of activities and TEC increase action approved in Q3 FY21.",
+  #  locations = cells_body(columns = "Mechanism Name", rows = 2))%>%
   
-  tab_footnote(
-    footnote = "Over-outlay due to delayed payments from previous FY.",
-    locations = cells_body(columns = "Mechanism Name", rows = 1))%>%
-  tab_footnote(
-    footnote = "ECHO under-outlay due to delayed vouchering and submission of payments.",
-    locations = cells_body(columns = "Mechanism Name", rows = 6))%>%
+#  tab_footnote(
+ #   footnote = "Over-outlay due to delayed payments from previous FY.",
+  #  locations = cells_body(columns = "Mechanism Name", rows = 1))%>%
+#  tab_footnote(
+ #   footnote = "ECHO under-outlay due to delayed vouchering and submission of payments.",
+  #  locations = cells_body(columns = "Mechanism Name", rows = 6))%>%
   
 
    tab_style(
@@ -340,3 +343,7 @@ tbl4<-df %>%
     ))
 ```
 tbl4%>%gtsave("Over outlay table.png")
+
+
+
+
