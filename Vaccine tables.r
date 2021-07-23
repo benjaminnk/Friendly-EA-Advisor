@@ -29,6 +29,7 @@
     library(ggtext)
     library(here)
     library(gt)
+    library(googlesheets4)
     
     up_arrow <- "<span style=\"color:green\">&#9650;</span>"
     down_arrow <- "<span style=\"color:red\">&#9660;</span>"
@@ -41,6 +42,8 @@
     df_data<-read.csv("Data/Potential COVID Mock up.xlsx - dataset.csv")
   #country
     df_country<-read.csv("Data/Potential COVID Mock up.xlsx - country_metadata.csv")
+    
+    
     
     LMICS<-c("Afghanistan","Benin","Burkina Faso","Burundi","Central African Republic","Chad","Congo,Dem. Rep.",
     "Eritrea","Ethiopia","Gambia","The Guinea","Guinea-Bissau","Haiti",
@@ -72,8 +75,7 @@
     
     #loop over some dates I chose two
     library(lubridate)
-    df<-df%>%
-      dplyr::filter(date == "2021-06-01" | date =="2021-07-01" | date =="2021-06-24")
+
     
     df<-df%>%
       filter(!is.na(state_region))
@@ -225,10 +227,10 @@ library(gt)
  
  #NEw way to focus on regional data
 #grab population data   
- df2<-df%>%
+ df_region<-df_country%>%
    group_by(state_region) %>%                         # Specify group indicator
    summarise_at(vars(population_total),              # Specify column
-                list(population = sum))
+                list(population_region = sum))
  #grab vax data
  df_vaxr<-df%>%group_by(state_region, date)%>%
    summarise_at(vars(value),              # Specify column
@@ -238,10 +240,15 @@ library(gt)
                 list(value= sum))
    
 
- df3<-left_join(df_vaxr,df2, by="state_region")%>%
-   dplyr::mutate("Vaccine Percentage"=value /population)
+ df3<-left_join(df_vaxr,df_region, by="state_region")%>%
+   dplyr::mutate("Vaccine Percentage"=value /population_region)%>%
+ dplyr::select(-("date.y"))
  df3<-df3%>%
-   dplyr::filter(state_region!="NA")
+   dplyr::filter(population_region!="NA")
+ 
+ #write out regional total (non interpolated)
+ write.csv(df3, "regional_vaccine_total.csv")
+ 
  df5<-df3%>%
    dplyr::select(-c("value", "population"))%>%
    pivot_wider(names_from = date, values_from="Vaccine Percentage")
