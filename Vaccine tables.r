@@ -45,11 +45,7 @@
     
     
     
-    LMICS<-c("Afghanistan","Benin","Burkina Faso","Burundi","Central African Republic","Chad","Congo,Dem. Rep.",
-    "Eritrea","Ethiopia","Gambia","The Guinea","Guinea-Bissau","Haiti",
-    "Liberia","Madagascar","Malawi","Mali","Mozambique","Nepal","Niger","Rwanda",
-    "Sierra Leone","Somalia","South Sudan","Syrian Arab Republic",
-    "Tajikistan","Tanzania","Togo","Uganda","Yemen,Rep.")
+ 
     
   
 

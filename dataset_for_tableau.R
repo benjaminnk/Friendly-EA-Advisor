@@ -44,10 +44,19 @@
 # MUNGE ============================================================================
   #full dataset
     df<-left_join(df_country,df_data, by="country_id")
+    df_countryld<-read.csv("Data/country metadata.csv")%>%
+     dplyr::rename("country_id"=ï..country_id)%>%
+      dplyr::select (c("country_id","population_total"))%>%
+     
     
     #get just vaccine data 
     df<-df%>%
       dplyr::filter(series_id=="79713")
+    df<-left_join(df,df_countryld,by="country_id")
+    
+    df<-df%>%
+      dplyr::mutate("Vaccine Percentage"=value /population_total)
+      
     
     
     #regional table
@@ -94,7 +103,7 @@
     df_all1<-df_all%>%
       count(state_region,date,`Goal`)
     
-    df_all2<-bind_rows(df_all1,df_all)
+    df_all3<-left_join(df_all1,df_all,by="state_region")
       
     
     write.csv(df_all, "income_regional_vaccine_total.csv")
@@ -189,4 +198,13 @@
   df_vaxb<-df_all%>%
     dplyr::select(state_region,date,Goal)
   write.csv(df_vaxb,"Benchmark dummy.csv")
+  
+  df_regiontotal<-df%>%
+    dplyr::select(c("income_group":"Benchmark"))
+  df_regiontotal<-df_regiontotal%>%
+    dplyr::rename(`state_region`=`income_group`)
+  
+  df_newtotal<-bind_rows(df_regiontotal,df)
+  
+  
   
