@@ -7,8 +7,6 @@
 # LOCALS & SETUP ============================================================================
 
 # Libraries
-library(glitr)
-library(glamr)
 library(tidyverse)
 library(gophr)
 library(scales)
@@ -22,6 +20,9 @@ library(janitor)
 library(readxl)
 library(data.table)
 
+table_out<-"GitHub/Friendly-EA-Advisor/Images/Budget"
+
+#weirdly I have to open up a file and re-copy in the Funds on CODB line each time for this to work
 filters<-c("Operating Unit",
            "FY 2004-2021 Q4 Total Pipeline (to include Obligated but not yet Outlaid and Unobligated but intended for Award)",
            "Unliquidated Obligations (ULO) / Obligations Pending Outlay (OPO): Expired Award on Non-Expired Fund Accounts (Untouchable Pipeline)",
@@ -29,7 +30,8 @@ filters<-c("Operating Unit",
            "Funds on CODB obligations that have not been fully outlaid and can't be used to support Current COP approved activities (Untouchable Pipeline)",
            "Other ULO / OPO",
            "Total Untouchable Pipeline",
-           "Projected Remaining Pipeline at Current FY Close","Months of Allowable Pipeline Needed",
+           "Projected Remaining Pipeline at Current FY Close",
+           "Months of Allowable Pipeline Needed",
            "Total Allowable Buffer Pipeline","New Adjusted Pipeline",
            "Adjusted Excess Pipeline",
            "Notes",
@@ -67,10 +69,10 @@ get_ou_pipeline<-function(df){
     mutate(ulos_on_expired_awards=as.numeric(ulos_on_expired_awards))%>%
     mutate(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline=as.numeric(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline))%>%
     mutate("pipeline_in_expired_awards"=ulos_on_expired_awards+ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline )%>%
-    select(-c(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline))%>%
+    rename("expired award_expired_accounts"=ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline)%>%
     rename("codb_untouchable_pipeline"=funds_on_codb_obligations_that_have_not_been_fully_outlaid_and_can_t_be_used_to_support_current_cop_approved_activities_untouchable_pipeline)%>%
     dplyr::relocate(pipeline_in_expired_awards, .before = notes)%>%
-    mutate_at(c(2:12), as.numeric)%>%
+    mutate_at(c(2:13), as.numeric)%>%
     rename("fy22_startup_pipeline"=fy_2004_2021_q4_total_pipeline_to_include_obligated_but_not_yet_outlaid_and_unobligated_but_intended_for_award)
   return (df)
 }
@@ -157,7 +159,8 @@ df_fy22top1<-df_fy22top1%>%
   gt::tab_source_note(
     source_note = gt::md(glue::glue("**Source**: EOFY Workbooks | Please reach out to your budget backstop for questions"))
   ) %>%
-  gtsave(.,"FY22_startup_pipeline.png") 
+  gtsave(.,path=table_out,filename = "FY22_startup_pipeline.png")
+ 
  
 
 df_expired_top_10<-df_expired_top_10%>%
@@ -208,7 +211,8 @@ df_expired_top_10<-df_expired_top_10%>%
   gt::tab_source_note(
     source_note = gt::md(glue::glue("**Source**: EOFY Workbooks | Please reach out to your budget backstop for questions"))
   ) %>%
-  gtsave(.,"FY22_award_pipeline.png") 
+ 
+  gtsave(.,path=table_out,filename = "FY22_award_pipeline.png")
 
 
 
@@ -260,7 +264,7 @@ df_other_ulo_op_top_10<-df_other_ulo_op_top_10%>%
   gt::tab_source_note(
     source_note = gt::md(glue::glue("**Source**: EOFY Workbooks | Please reach out to your budget backstop for questions"))
   ) %>%
-  gtsave(.,"FY21_ULO.png") 
+gtsave(.,path=table_out,filename = "FY21_ULO.png")
   
 
 df_untouchable_top_10<-df_untouchable_top_10%>%
@@ -314,7 +318,8 @@ df_untouchable_top_10<-df_untouchable_top_10%>%
   gt::tab_source_note(
     source_note = gt::md(glue::glue("**Source**: EOFY Workbooks | Please reach out to your budget backstop for questions"))
   ) %>%
-  gtsave(.,"FY22_untouchable_pipeline.png") 
+ gtsave(.,path=table_out,filename = "FY22_untouchable_pipeline.png")
+
 
 ###Google sheet output====
 target_location <- gs4_get(" https://docs.google.com/spreadsheets/d/1FSnWTGbxw9Xu2M9vBd8JAiK5RcpFJ5eHjDCinhhNnH4/edit#gid=0")

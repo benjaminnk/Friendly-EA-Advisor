@@ -32,6 +32,8 @@ ifelse(y > 0.000, (x / y), NA_real_)
 
 
 budget<-list.files("~/Data/Budget Files/Phase 1 Outlay Workbooks",full.names = TRUE) #can try and automate via google folder
+#delete extra row in kenya
+
 glimpse(budget)
 data <- "~/Data/Budget Files/Phase 1 Outlay Workbooks/Kenya_USAID_EOFY_FY 2021.xlsx" 
 

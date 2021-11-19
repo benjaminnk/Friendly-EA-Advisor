@@ -21,6 +21,7 @@ library(googlesheets4)
 library(janitor)
 library(readxl)
 library(data.table)
+table_out<-"GitHub/Friendly-EA-Advisor/Images/Budget"
 
 filters<-c("Operating Unit",
            "FY 2004-2021 Q4 Total Pipeline (to include Obligated but not yet Outlaid and Unobligated but intended for Award)",
@@ -67,10 +68,10 @@ get_ou_pipeline<-function(df){
     mutate(ulos_on_expired_awards=as.numeric(ulos_on_expired_awards))%>%
     mutate(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline=as.numeric(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline))%>%
     mutate("pipeline_in_expired_awards"=ulos_on_expired_awards+ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline )%>%
-    select(-c(ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline))%>%
+    rename("expired award_expired_accounts"=ulo_opo_expired_awards_on_expired_fund_accounts_as_of_the_last_calendar_day_of_previous_fy_untouchable_pipeline)%>%
     rename("codb_untouchable_pipeline"=funds_on_codb_obligations_that_have_not_been_fully_outlaid_and_can_t_be_used_to_support_current_cop_approved_activities_untouchable_pipeline)%>%
     dplyr::relocate(pipeline_in_expired_awards, .before = notes)%>%
-    mutate_at(c(2:12), as.numeric)%>%
+    mutate_at(c(2:13), as.numeric)%>%
     rename("fy22_startup_pipeline"=fy_2004_2021_q4_total_pipeline_to_include_obligated_but_not_yet_outlaid_and_unobligated_but_intended_for_award)
   return (df)
 }
@@ -89,16 +90,13 @@ df_wcf<- purrr::map_dfr(.x = budget,
 df_wcf1<-df_wcf%>%
   select(operating_unit,cop22_applied_pipeline)%>%
   rename(cop22_applied_pipeline_wcf=cop22_applied_pipeline)
+#get the ou pipeline data set (i ran this while it was already open)
 df11<-df1%>%
   select(operating_unit,cop22_applied_pipeline)
 
 df_all<-left_join(df11, df_wcf1, by="operating_unit")%>%
   arrange(desc(cop22_applied_pipeline))
 
-
-
-#df_all1<-df_all%>%
- # filter(cop22_applied_pipeline>0 & cop22_applied_pipeline_wcf>0)
 
 df_top10<-df_all%>%
   arrange(desc(cop22_applied_pipeline))%>%
@@ -110,7 +108,7 @@ df_bottom28<-df_bottom28%>%
   slice_min(cop22_applied_pipeline,n=29)%>%
   arrange(desc(cop22_applied_pipeline))
 
-# charting ============================================================================
+# charting making of the esf function ============================================================================
   esf<-function(df){
     df%>%
       gt()%>%
@@ -181,8 +179,8 @@ sheet_write(df_wcf, target_location, sheet = "WCF OU pipline")
 
 df_top10%>%
   esf() %>%
-  gtsave(.,"COP22_all_pipeline_10.png") 
+  gtsave(.,path=table_out,filename = glue::glue("COP22_all_pipeline_10.png"))
 
 df_bottom28%>%
 esf() %>%
-  gtsave(.,"COP22_all_pipeline_48.png") 
+  gtsave(.,path=table_out,filename = glue::glue("COP22_all_pipeline_bottom48.png"))
